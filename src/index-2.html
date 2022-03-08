@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Video Editing App in Node and Express</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="text-center">Merge Videos</h1>
+      <div id="videos"></div>
+      <div id="merge-video-output"></div>
+      <form validate>
+        <div class="form-group">
+          <input
+            id="video-input"
+            type="file"
+            name="files"
+            multiple
+            required
+            class="form-control"
+          />
+        </div>
+        <div class="form-group">
+          <button type="submit" id="merge-video-button" class="btn btn-danger">
+            Merge Videos
+          </button>
+        </div>
+      </form>
+
+      <h1 class="text-center">Trim Video</h1>
+      <div id="trim-video"></div>
+      <div id="trim-video-output"></div>
+      <form validate>
+        <div class="form-group">
+          <input
+            id="trim-video-input"
+            type="file"
+            name="files"
+            required
+            class="form-control"
+          />
+        </div>
+        <div class="form-group">
+          <button type="submit" id="trim-video-button" class="btn btn-danger">
+            Trim Video
+          </button>
+        </div>
+      </form>
+    </div>
+  </body>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script>
+    const videoWrapper = document.getElementById("videos");
+
+    const mergeVideosInput = document.getElementById("video-input");
+    mergeVideosInput.addEventListener("change", (e) =>
+      showVideos(e, videoWrapper)
+    );
+
+    const trimVideoWrapper = document.getElementById("trim-video");
+    const trimVideosInput = document.getElementById("trim-video-input");
+    trimVideosInput.addEventListener("change", (e) =>
+      showVideos(e, trimVideoWrapper)
+    );
+
+    const mergeVideoBtn = document.getElementById("merge-video-button");
+    mergeVideoBtn.addEventListener("click", mergeVideos);
+
+    const trimVideoBtn = document.getElementById("trim-video-button");
+    trimVideoBtn.addEventListener("click", trimVideos);
+
+    
+
+    let formData = new FormData();
+
+    function showVideos(e, wrapper) {
+      e.preventDefault();
+      const { files } = e.target;
+      for (let file of files) {
+        const blobURL = URL.createObjectURL(file);
+
+        const videoEle = document.createElement("video");
+        videoEle.style.margin = "10px";
+        videoEle.src = blobURL;
+        videoEle.width = 320;
+        videoEle.height = 240;
+        videoEle.controls = true;
+        wrapper.appendChild(videoEle);
+        formData.append("files", file);
+      }
+    }
+
+    async function mergeVideos(e) {
+      e.preventDefault();
+
+      // If data doesn't exists, return
+      if (!formData.has("files")) {
+        return;
+      }
+      console.log("formData", formData);
+
+      const response = await fetch("/merge", {
+        method: "POST",
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        redirect: "follow",
+        referrerPolicy: "no-referrer",
+        body: formData,
+      });
+
+      const data = await response.blob();
+
+      const outputVideoWrapper = document.getElementById("merge-video-output");
+      // append video to the DOM
+      const outputVideoEle = document.createElement("video");
+      outputVideoEle.style.margin = "10px";
+      outputVideoEle.src = URL.createObjectURL(data);
+      outputVideoEle.width = 320;
+      outputVideoEle.height = 240;
+      outputVideoEle.controls = true;
+      outputVideoWrapper.appendChild(outputVideoEle);
+    }
+
+    async function trimVideos(e) {
+      e.preventDefault();
+
+      // If data doesn't exists, return
+      if (!formData.has("files")) {
+        return;
+      }
+      console.log("formData", formData);
+
+      const response = await fetch("/trim", {
+        method: "POST",
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        redirect: "follow",
+        referrerPolicy: "no-referrer",
+        body: formData,
+      });
+
+      const data = await response.blob();
+      const outputVideoWrapper = document.getElementById("trim-video-output");
+      // append video to the DOM
+      const outputVideoEle = document.createElement("video");
+      outputVideoEle.style.margin = "10px";
+      outputVideoEle.src = URL.createObjectURL(data);
+      outputVideoEle.width = 320;
+      outputVideoEle.height = 240;
+      outputVideoEle.controls = true;
+      outputVideoWrapper.appendChild(outputVideoEle);
+    }
+  </script>
+</html>

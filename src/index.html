@@ -6,6 +6,10 @@
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
     />
+    <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/14.7.0/nouislider.css"
+  />
   </head>
   <body>
     <div class="container">
@@ -32,6 +36,43 @@
 
       <h1 class="text-center">Trim Video</h1>
       <div id="trim-video"></div>
+      <div id="trim-video-container" class="container my-4 d-none">
+        <div class="row">
+          <div class="col-12">
+            <div class="card shadow">
+              <div class="card-header">
+                <h2 class="text-center">Trim your video</h2>
+              </div>
+              <div class="card-body px-4">
+                <div class="row">
+                  <div class="col-6">
+                    <img id="thumbnail-start" class="img-fluid" src="" width="100%" alt="video thumbnail">
+                  </div>
+                  <div class="col-6">
+                    <img id="thumbnail-finish" class="img-fluid" src="" width="100%" alt="video thumbnail">
+                  </div>
+                </div>
+                <div class="row text-center mt-3">
+                  <div class="col-6">
+                    <p>Start: <code><span class="start">00:00:01</span></code></p>
+                  </div>
+                  <div class="col-6">
+                    <p>Finish: <code><span class="finish">00:00:30</span></code></p>
+                  </div>
+                </div>
+                <div class="row text-center mt-4 px-4">
+                  <div id="slider" class="w-100"></div>
+                </div>
+                <div class="row text-center mt-3">
+                  <div class="col-12">
+                    <div id="trim-video-images"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div id="trim-video-output"></div>
       <form validate>
         <div class="form-group">
@@ -44,13 +85,71 @@
           />
         </div>
         <div class="form-group">
-          <button type="submit" id="trim-video-button" class="btn btn-danger">
+          <button type="submit" id="thumbnails-button" class="btn btn-danger">
+            Get Thumbnails
+          </button>
+          <button type="submit" id="trim-video-button" class="btn btn-danger" style="visibility:hidden">
             Trim Video
+          </button>
+        </div>
+      </form>
+
+      <h1 class="text-center">Add Captions</h1>
+      <div id="add-captions"></div>
+      <div id="add-captions-output"></div>
+      <form validate>
+        <div class="form-group">
+          <label for="files" class="btn">Select Video :</label>
+          <input
+            id="video-captions-input"
+            type="file"
+            name="files"
+            required
+            class="form-control"
+          />
+          <br/>
+          <label for="files" class="btn">Select Subtitles :</label>
+          <input
+            id="captions-input"
+            type="file"
+            name="files"
+            required
+            class="form-control"
+            accept=".srt"
+          />
+        </div>
+        <div class="form-group">
+          <button type="submit" id="add-captions-button" class="btn btn-danger">
+            Add Captions
+          </button>
+        </div>
+      </form>
+
+      <h1 class="text-center">Overlay Text</h1>
+      <div id="overlay-video">
+        <div id="white-overlay" style="position: absolute;height: 470px;width: 920px;display: none;z-index: 3;">
+      </div>
+      </div>
+      <div id="overlay-video-output"></div>
+      <form validate>
+        <div class="form-group">
+          <input
+            id="overlay-video-input"
+            type="file"
+            name="files"
+            required
+            class="form-control"
+          />
+        </div>
+        <div class="form-group">
+          <button type="submit" id="overlay-video-button" class="btn btn-danger">
+            Overlay Video
           </button>
         </div>
       </form>
     </div>
   </body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/14.7.0/nouislider.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
   <script>
     const videoWrapper = document.getElementById("videos");
@@ -66,27 +165,96 @@
       showVideos(e, trimVideoWrapper)
     );
 
+    const captionsWrapper = document.getElementById("add-captions");
+    const videocaptionsInput = document.getElementById("video-captions-input");
+    videocaptionsInput.addEventListener("change", (e) =>
+      showVideos(e, captionsWrapper)
+    );
+
     const mergeVideoBtn = document.getElementById("merge-video-button");
     mergeVideoBtn.addEventListener("click", mergeVideos);
 
-    const trimVideoBtn = document.getElementById("trim-video-button");
-    trimVideoBtn.addEventListener("click", trimVideos);
+    const captionsBtn = document.getElementById("add-captions-button");
+    captionsBtn.addEventListener("click", addCaptions);    
 
-    
+    const thumbnailsBtn = document.getElementById("thumbnails-button");
+    thumbnailsBtn.addEventListener("click", getThumbnails);    
 
-    let formData = new FormData();
+    var formData = new FormData();
 
-    function showVideos(e, wrapper) {
+    const overlayVieodWrapper = document.getElementById("overlay-video");
+    const overlayVideosInput = document.getElementById("overlay-video-input");
+    const whiteOverlay = document.getElementById("white-overlay");
+    overlayVideosInput.addEventListener("change", (e) => {
+      showVideos(e, overlayVieodWrapper, 920, 540, "0px");
+      let button = document.createElement("button");
+      button.id = "add-text-button";
+      button.innerHTML = "Add text";
+      button.style.marginLeft = "10px";
+      overlayVieodWrapper.appendChild(button);
+
+      let addTextButton = document.getElementById("add-text-button");
+        addTextButton && addTextButton.addEventListener("click", () => {
+          whiteOverlay.classList.add("d-block");
+        });
+    });
+    whiteOverlay.addEventListener("click", (e) => {
+      if(whiteOverlay.children.length === 0) {
+        formData.set("offsetX", Math.floor(e.offsetX*1280 / 920));
+        formData.set("offsetY", Math.floor(e.offsetY*720 / 540));
+        let form = document.createElement("form");
+        let input = document.createElement("input");
+        let button = document.createElement("button");
+        input.id = "overlay-addtext-input";
+        input.name = "overlay-addtext-input";
+        button.innerHTML = "Submit";
+        button.type = "submit";
+        button.id = "overlay-addtext-button";
+        form.style.position = "absolute";
+        form.style.marginLeft = e.offsetX + "px";
+        form.style.marginTop = e.offsetY + "px";
+        form.style.zIndex = 5;
+        form.id = "text-form";
+        form.appendChild(input);
+        form.appendChild(button);
+        whiteOverlay.appendChild(form);
+
+        let addTextSubmit = document.getElementById("overlay-addtext-button");
+        addTextSubmit && addTextSubmit.addEventListener("click", (ev) => {
+            ev.preventDefault();
+            let text = document.getElementById("overlay-addtext-input");
+            if(text.value !== "") {
+              formData.set("text", text.value);
+              let textForm = document.getElementById("text-form");
+              textForm.classList.add("d-none");
+
+              let div = document.createElement("div");
+              div.innerHTML= text.value;
+              div.style.position = "absolute";
+              div.style.marginLeft = e.offsetX + "px";
+              div.style.marginTop = e.offsetY + "px";
+              div.style.fontSize = "30px";
+              div.style.zIndex = 7;
+              whiteOverlay.appendChild(div);
+            }
+        });
+      }
+    });
+
+    const overlayVideoBtn = document.getElementById("overlay-video-button");
+    overlayVideoBtn.addEventListener("click", overlayVideos);
+
+    function showVideos(e, wrapper, width = 320, height = 240, margin = "10px") {
       e.preventDefault();
       const { files } = e.target;
       for (let file of files) {
         const blobURL = URL.createObjectURL(file);
 
         const videoEle = document.createElement("video");
-        videoEle.style.margin = "10px";
+        videoEle.style.margin = margin;
         videoEle.src = blobURL;
-        videoEle.width = 320;
-        videoEle.height = 240;
+        videoEle.width = width;
+        videoEle.height = height;
         videoEle.controls = true;
         wrapper.appendChild(videoEle);
         formData.append("files", file);
@@ -119,22 +287,25 @@
       const outputVideoEle = document.createElement("video");
       outputVideoEle.style.margin = "10px";
       outputVideoEle.src = URL.createObjectURL(data);
-      outputVideoEle.width = 320;
-      outputVideoEle.height = 240;
+      outputVideoEle.width = 920;
+      outputVideoEle.height = 540;
       outputVideoEle.controls = true;
       outputVideoWrapper.appendChild(outputVideoEle);
     }
 
-    async function trimVideos(e) {
+    async function addCaptions(e) {
       e.preventDefault();
+      const captionsInput = document.getElementById("captions-input");
+      const { files } = captionsInput;
 
       // If data doesn't exists, return
-      if (!formData.has("files")) {
+      if (!formData.has("files") || !files.length) {
         return;
       }
-      console.log("formData", formData);
 
-      const response = await fetch("/trim", {
+      formData.append("files", files[0]);
+
+      const response = await fetch("/addCaptions", {
         method: "POST",
         mode: "cors",
         cache: "no-cache",
@@ -145,13 +316,184 @@
       });
 
       const data = await response.blob();
-      const outputVideoWrapper = document.getElementById("trim-video-output");
+
+      const outputVideoWrapper = document.getElementById("add-captions-output");
       // append video to the DOM
       const outputVideoEle = document.createElement("video");
       outputVideoEle.style.margin = "10px";
       outputVideoEle.src = URL.createObjectURL(data);
-      outputVideoEle.width = 320;
-      outputVideoEle.height = 240;
+      outputVideoEle.width = 920;
+      outputVideoEle.height = 540;
+      outputVideoEle.controls = true;
+      outputVideoWrapper.appendChild(outputVideoEle);
+    }
+    function getSeconds(time) {
+      const [hours, minutes, seconds] = time.split(":");
+        const totalSeconds = +hours * 60 * 60 + +minutes * 60 + +seconds;
+        return totalSeconds
+    }
+
+    async function getThumbnails(e) {
+      e.preventDefault();
+      if (!formData.has("files")) {
+        return;
+      }
+
+      const response = await fetch("/allThumbnails", {
+        method: "POST",
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        redirect: "follow",
+        referrerPolicy: "no-referrer",
+        body: formData,
+      });
+
+      const data = await response.json();
+      const paths = data.paths.map(e => e.split('/').slice(1).join('/'))
+
+      const outputImagesWrapper = document.getElementById("trim-video-images");
+      const container = document.getElementById("trim-video-container");
+      container.classList.add("d-block")
+
+      $("#thumbnail-start").attr("src", paths[0]);
+      $("#thumbnail-finish").attr("src", paths.slice(-1)[0]);
+
+      const trimVideo = document.getElementById("trim-video");
+      const duration = Math.floor(trimVideo.firstChild.duration);
+
+      // // append video to the DOM
+      paths.map(e => {
+        const img = document.createElement("img");
+        img.src = e
+        img.width = 100;
+        img.height = 80;
+        outputImagesWrapper.appendChild(img);
+      })
+
+      let slider = document.getElementById("slider");
+
+      noUiSlider.create(slider, {
+        start: [0, duration],
+        connect: true,
+        step: 1,
+        range: {
+          min: 0,
+          max: duration
+        }
+      });
+
+      let start_element = document.getElementsByClassName("start");
+      let finish_element = document.getElementsByClassName("finish");
+      finish_element[0].innerHTML = new Date((duration) * 1000)
+          .toISOString()
+          .substr(11, 8);
+
+      slider.noUiSlider.on("change", function (values, handle) {
+        let old_start = start_element[0].innerHTML;
+        let old_finish = finish_element[0].innerHTML;
+        let slider_values = slider.noUiSlider.get();
+        let start_string = new Date(slider_values[0] * 1000)
+          .toISOString()
+          .substr(11, 8);
+        let finish_string = new Date(slider_values[1] * 1000)
+          .toISOString()
+          .substr(11, 8);
+        let duration = new Date((slider_values[1] - slider_values[0]) * 1000)
+          .toISOString()
+          .substr(11, 8);
+        start_element[0].innerHTML = start_string;
+        finish_element[0].innerHTML = finish_string;
+        if (old_start !== start_string) {
+          createThumb(start_string, "start");
+        }
+        if (old_finish !== finish_string) {
+          createThumb(finish_string, "finish");
+        }
+      });
+
+      async function createThumb(time, type) {
+        let form = new FormData();
+        form.set("time", time);
+        const response = await fetch("/thumbnail", {
+          method: "POST",
+          mode: "cors",
+          cache: "no-cache",
+          credentials: "same-origin",
+          redirect: "follow",
+          referrerPolicy: "no-referrer",
+          body: form,
+        });
+
+        const data = await response.json();
+        const path = data.path.split('/').slice(1).join('/')
+
+        if (type === "start") {
+          $("#thumbnail-start").attr("src", path);
+        } else {
+          $("#thumbnail-finish").attr("src", path);
+        }
+      }
+
+      const trimVideoBtn = document.getElementById("trim-video-button");
+      trimVideoBtn.addEventListener("click", trimVideos);
+      trimVideoBtn.classList.add("visible")
+
+      async function trimVideos(e) {
+        e.preventDefault();
+        let duration = getSeconds(finish_element[0].innerHTML) - getSeconds(start_element[0].innerHTML)
+        let form = new FormData();
+        form.set("starttime", start_element[0].innerHTML);
+        form.set("duration", duration < 1 ? 1 : duration);
+        const response = await fetch("/trim", {
+          method: "POST",
+          mode: "cors",
+          cache: "no-cache",
+          credentials: "same-origin",
+          redirect: "follow",
+          referrerPolicy: "no-referrer",
+          body: form,
+        });
+
+        const data = await response.blob();
+        const outputVideoWrapper = document.getElementById("trim-video-output");
+        // append video to the DOM
+        const outputVideoEle = document.createElement("video");
+        outputVideoEle.style.margin = "10px";
+        outputVideoEle.src = URL.createObjectURL(data);
+        outputVideoEle.width = 920;
+        outputVideoEle.height = 540;
+        outputVideoEle.controls = true;
+        outputVideoWrapper.appendChild(outputVideoEle);
+      }
+    }
+
+    async function overlayVideos(e) {
+      e.preventDefault();
+
+      // If data doesn't exists, return
+      if (!formData.has("files")) {
+        return;
+      }
+      console.log("formData", formData);
+
+      const response = await fetch("/addOverlay", {
+        method: "POST",
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin",
+        redirect: "follow",
+        referrerPolicy: "no-referrer",
+        body: formData,
+      });
+
+      const data = await response.blob();
+      const outputVideoWrapper = document.getElementById("overlay-video-output");
+      // append video to the DOM
+      const outputVideoEle = document.createElement("video");
+      outputVideoEle.src = URL.createObjectURL(data);
+      outputVideoEle.width = 920;
+      outputVideoEle.height = 540;
       outputVideoEle.controls = true;
       outputVideoWrapper.appendChild(outputVideoEle);
     }
