@@ -262,7 +262,7 @@ app.post("/thumbnail", uploadToTrim.array("files", 0), (req, res) => {
     });
 });
 
-app.post("/addOverlay", upload.array("files", 1), (req, res) => {
+app.post("/addOverlay", upload.array("files", 1000), (req, res) => {
   if (!req.files || !req.body.text || !req.body.offsetX || !req.body.offsetY) {
     res.send(400).json({ message: "No data found!" });
     return;
@@ -275,6 +275,7 @@ app.post("/addOverlay", upload.array("files", 1), (req, res) => {
     .videoFilters({
       filter: 'drawtext',
       options: {
+        fontfile: path.join(__dirname + `/fonts/Roboto-Regular.ttf'`),
         text: req.body.text,
         fontsize: 40,
         fontcolor: 'black',
@@ -288,8 +289,8 @@ app.post("/addOverlay", upload.array("files", 1), (req, res) => {
         boxborderw: 5,
       }
     })
-    .on("error", function (err) {
-      console.log("Error: " + err);
+    .on("error", function (err, stdout, stderr) {
+      console.log("Error: " + stderr);
       req.files.forEach((file) => {
         fs.unlinkSync(file.path);
       });
